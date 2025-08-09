@@ -1,17 +1,43 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractBaseUser, AbstractUser, PermissionsMixin, UserManager
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core import validators
-from .managers import CustomUserManager
 import logging
 from cloudinary_storage.storage import RawMediaCloudinaryStorage
+from django.contrib.auth.models import UserManager
 
 logger = logging.getLogger(__name__)
 
-class User(AbstractUser):
+class CustomUserManager(UserManager):
+    def _create_user(self, email, password, **extra_fields):
+        if not email:
+            raise ValueError("Invalid email provided")
+        
+        email= self.normalize_email(email)
+        user= self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+
+        return user
+    
+    def create_user(self, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)    
+        return self._create_user(email, password, **extra_fields)
+    
+    def create_superuser(self, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser',True)
+        extra_fields.setdefault('is_active', True)
+        extra_fields.setdefault('user_type', 'admin')
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        return self._create_user(email, password, **extra_fields)
+
+class User(AbstractBaseUser, PermissionsMixin):
     """Custom user model extending Django's AbstractUser"""
     USER_TYPE_CHOICES = (
         ('donor', 'Donor'),
@@ -35,9 +61,11 @@ class User(AbstractUser):
     is_superuser=  models.BooleanField(default=False)
     is_active= models.BooleanField(default=True)
 
+    otp = models.CharField(max_length=6, blank=True, null=True)
+    otp_expiry = models.DateTimeField(blank=True, null=True)
+
     objects= CustomUserManager()
 
-    username= email
     USERNAME_FIELD= 'email'
     EMAIL_FIELD= 'email'
     REQUIRED_FIELDS= []
@@ -51,8 +79,6 @@ class User(AbstractUser):
             models.Index(fields=['user_type']),  # Frequently filtered by role
             models.Index(fields=['is_active']),  # Often used in queries
             models.Index(fields=['phone_number']),  # For time-based queries
-            models.Index(fields=['is_active']),  # For time-based queries
-            models.Index(fields=['national_id', 'email'], name='national_id_email_idx'),  # Composite index
         ]
 
     def __str__(self):
