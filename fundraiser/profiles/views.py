@@ -25,19 +25,23 @@ logger = logging.getLogger(__name__)
 # Create your views here.
 class SignUp(APIView):
     def post(self, request):
-        data = request.data
-        email= data.get('email')
-        phone = data.get('phone_number')
-        national_id = data.get('national_id')
-        
-        if User.objects.filter(Q(email=email) | Q(phone_number=phone) | Q(national_id=national_id)).exists():
-            return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        serializer = UserSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            data = request.data
+            email= data.get('email')
+            phone = data.get('phone_number')
+            national_id = data.get('national_id')
+            
+            if User.objects.filter(Q(email=email) | Q(phone_number=phone) | Q(national_id=national_id)).exists():
+                return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            serializer = UserSerializer(data=request.data)
+            if serializer.is_valid():
+                user = serializer.save()
+                return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error signing up user: {e}")
+            return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class LogIn(APIView):
     def post(self, request):
@@ -119,6 +123,7 @@ class LogOut(APIView):
             return Response({'message': 'Logged out successfully'}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error logging out user: {e}")
+            return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RefreshTokenView(APIView):
     def post(self, request):
@@ -183,6 +188,7 @@ class ResetPassword(APIView):
             # Send OTP to user's email
             return Response({'message': 'OTP sent to email'}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
+            logger.error(f"User with email {email} not found")
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
 class ChangePassword(APIView):
@@ -224,5 +230,5 @@ class ChangePassword(APIView):
             return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            #LOGGER.error(f"Error in ChangePassword.post: {e}", exc_info=True)
+            logger.error(f"Error in ChangePassword.post: {e}", exc_info=True)
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
