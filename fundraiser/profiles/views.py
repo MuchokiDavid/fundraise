@@ -167,3 +167,62 @@ class UserView(APIView):
     def get(self, request):
         user = request.user
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+    
+class ResetPassword(APIView):
+    def post(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            otp = generate_random_otp()
+            user.otp = otp
+            user.otp_expiry = dt.datetime.now() + dt.timedelta(minutes=10)
+            user.save()
+            # Send OTP to user's email
+            return Response({'message': 'OTP sent to email'}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+class ChangePassword(APIView):
+    def post(self, request):
+        try:
+            data = request.data
+            # username = data.get('username')
+            otp= data.get('otp')
+            password = data.get('password')
+            confirm_password = data.get('confirm_password')
+
+            user = User.objects.filter(otp=otp).first()
+            if user is None:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+            if not otp:
+                return Response({'error': 'OTP is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not password or not confirm_password:
+                return Response({'error': 'Password and confirm password are required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if user.otp_expiry < timezone.now():
+                user.otp = None
+                user.otp_expiry = None
+                user.save()
+                return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if user.otp != otp:
+                return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if password != confirm_password:
+                return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(password)
+            user.otp = None
+            user.otp_expiry = None
+            user.save()
+
+            return Response({'message': 'Password changed successfully'}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            #LOGGER.error(f"Error in ChangePassword.post: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
