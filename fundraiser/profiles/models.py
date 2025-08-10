@@ -54,6 +54,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                              unique=True,
                              validators=[validators.EmailValidator(message="Enter a valid email address.")])
     profile_picture = models.FileField(upload_to='profile/', blank=True, null=True, storage=RawMediaCloudinaryStorage())
+    password = models.CharField(max_length=128, blank=True, null=True)
     bio = models.TextField(blank=True)
     is_verified = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
