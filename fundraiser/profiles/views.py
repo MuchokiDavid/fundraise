@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.db.models import Q
 import logging
+from django.utils import timezone
+from django.template.loader import render_to_string
 
 from rest_framework import status
 from rest_framework.views import APIView
@@ -16,7 +18,7 @@ from rest_framework.permissions import IsAuthenticated
 
 from .models import *
 from .serializers import *
-from .utility import generate_random_otp, create_token
+from .utility import generate_random_otp, create_token, send_queued_email
 
 OAUTH_CLIENT_ID = config('OAUTH_CLIENT_ID')
 OAUTH_SECRET_ID = config('OAUTH_SECRET_ID')
@@ -183,10 +185,16 @@ class ResetPassword(APIView):
             user = User.objects.get(email=email)
             otp = generate_random_otp()
             user.otp = otp
-            user.otp_expiry = dt.datetime.now() + dt.timedelta(minutes=10)
+            user.otp_expiry = timezone.now() + dt.timedelta(minutes=10)
             user.save()
+            
             # Send OTP to user's email
-            return Response({'message': 'OTP sent to email'}, status=status.HTTP_200_OK)
+            subject = 'Reset Password'
+            html_content = f'Your OTP for password reset is: {otp}. This OTP will expire in 10 minutes.'
+            send_queued_email(user.email, subject, html_content)
+
+
+            return Response({'message': "OTP sent to email. If you don't see it, please check your spam folder to see"}, status=status.HTTP_200_OK)
         except User.DoesNotExist:
             logger.error(f"User with email {email} not found")
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
