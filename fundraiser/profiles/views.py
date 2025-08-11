@@ -31,7 +31,18 @@ logger = logging.getLogger(__name__)
 class SignUp(APIView):
     @swagger_auto_schema(
         operation_description="Register a new user",
-        request_body=UserSerializer,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+                'firstname': openapi.Schema(type=openapi.TYPE_STRING),
+                'lastname': openapi.Schema(type=openapi.TYPE_STRING),
+                'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                'national_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'user_type': openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ),
         responses={201: UserSerializer, 400: 'Bad Request'}
     )
     def post(self, request):
