@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'defender',
     'profiles',
     'funds',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
