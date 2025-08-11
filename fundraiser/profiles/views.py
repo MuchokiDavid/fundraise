@@ -16,6 +16,9 @@ from oauth2_provider.models import Application, AccessToken, RefreshToken
 from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope, OAuth2Authentication
 from rest_framework.permissions import IsAuthenticated
 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 from .models import *
 from .serializers import *
 from .utility import generate_random_otp, create_token, send_queued_email
@@ -26,6 +29,11 @@ logger = logging.getLogger(__name__)
 
 # Create your views here.
 class SignUp(APIView):
+    @swagger_auto_schema(
+        operation_description="Register a new user",
+        request_body=UserSerializer,
+        responses={201: UserSerializer, 400: 'Bad Request'}
+    )
     def post(self, request):
         try:
             data = request.data
@@ -46,6 +54,17 @@ class SignUp(APIView):
             return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 class LogIn(APIView):
+    @swagger_auto_schema(
+        operation_description="Login user and get access token",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ),
+        responses={200: 'Login successful', 400: 'Bad Request', 404: 'User not found'}
+    )
     def post(self, request):
         try:
           username = request.data.get('email')
@@ -111,6 +130,10 @@ class LogOut(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Logout user and revoke tokens",
+        responses={200: 'Logout successful'}
+    )
     def post(self, request):
         user = request.user
         try:
@@ -128,6 +151,16 @@ class LogOut(APIView):
             return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RefreshTokenView(APIView):
+    @swagger_auto_schema(
+        operation_description="Refresh access token",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'refresh_token': openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ),
+        responses={200: 'Token refreshed', 400: 'Bad Request'}
+    )
     def post(self, request):
         try:
           refresh_token = request.data.get('refresh_token')
@@ -171,11 +204,25 @@ class UserView(APIView):
     authentication_classes= [OAuth2Authentication]
     permission_classes = [TokenHasReadWriteScope,  IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Get current user profile",
+        responses={200: UserSerializer}
+    )
     def get(self, request):
         user = request.user
         return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
     
 class ResetPassword(APIView):
+    @swagger_auto_schema(
+        operation_description="Send OTP for password reset",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'email': openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ),
+        responses={200: 'OTP sent', 404: 'User not found'}
+    )
     def post(self, request):
         email = request.data.get('email')
         if not email:
@@ -200,6 +247,18 @@ class ResetPassword(APIView):
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
         
 class ChangePassword(APIView):
+    @swagger_auto_schema(
+        operation_description="Change password using OTP",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'otp': openapi.Schema(type=openapi.TYPE_STRING),
+                'password': openapi.Schema(type=openapi.TYPE_STRING),
+                'confirm_password': openapi.Schema(type=openapi.TYPE_STRING)
+            }
+        ),
+        responses={200: 'Password changed', 400: 'Bad Request'}
+    )
     def post(self, request):
         try:
             data = request.data
