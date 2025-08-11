@@ -74,7 +74,21 @@ class LogIn(APIView):
                 'password': openapi.Schema(type=openapi.TYPE_STRING)
             }
         ),
-        responses={200: 'Login successful', 400: 'Bad Request', 404: 'User not found'}
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'access_token': openapi.Schema(type=openapi.TYPE_STRING),
+                    'expires_in': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'token_type': openapi.Schema(type=openapi.TYPE_STRING),
+                    'scope': openapi.Schema(type=openapi.TYPE_STRING),
+                    'refresh_token': openapi.Schema(type=openapi.TYPE_STRING),
+                    'user': openapi.Schema(type=openapi.TYPE_OBJECT)
+                }
+            ),
+            400: 'Bad Request',
+            404: 'User not found'
+        }
     )
     def post(self, request):
         try:
@@ -170,7 +184,21 @@ class RefreshTokenView(APIView):
                 'refresh_token': openapi.Schema(type=openapi.TYPE_STRING)
             }
         ),
-        responses={200: 'Token refreshed', 400: 'Bad Request'}
+        responses={
+            200: openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'access_token': openapi.Schema(type=openapi.TYPE_STRING),
+                    'expires_in': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'token_type': openapi.Schema(type=openapi.TYPE_STRING),
+                    'scope': openapi.Schema(type=openapi.TYPE_STRING),
+                    'refresh_token': openapi.Schema(type=openapi.TYPE_STRING),
+                    'user': openapi.Schema(type=openapi.TYPE_OBJECT)
+                }
+            ),
+            400: 'Bad Request',
+            404: 'User not found'
+        }
     )
     def post(self, request):
         try:
