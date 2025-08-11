@@ -216,3 +216,33 @@ OAUTH2_PROVIDER = {
         'groups': 'Access to your groups'
     }
 }
+
+# Celery settings with proper SSL configuration
+CELERY_BROKER_URL = f"{config('REDIS_BROKER_URL')}/0"  # /0 for DB 0
+CELERY_RESULT_BACKEND = f"{config('REDIS_RESULT_BACKEND')}/0"
+CELERY_BROKER_USE_SSL = {
+    'ssl_cert_reqs': 'none'  # 'none', 'required', or 'optional'
+    # 'ssl_ca_certs': '/path/to/ca_cert.pem'  # Get this from Upstash
+}
+CELERY_REDIS_BACKEND_USE_SSL = {
+    'ssl_cert_reqs': 'none'  # Must match broker setting
+}
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
+CELERY_TASK_TRACK_STARTED = True  # Useful for progress tracking
+CELERYD_MAX_MEMORY_PER_CHILD = 100000  # 100MB
+CELERYD_MAX_TASKS_PER_CHILD = 50
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = True
+EMAIL_HOST = config('MAIL_SERVER')
+EMAIL_HOST_USER = config('MAIL_USERNAME')
+EMAIL_HOST_PASSWORD = config('MAIL_PASSWORD')
+EMAIL_PORT = config('MAIL_PORT')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
